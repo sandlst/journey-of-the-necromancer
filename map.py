@@ -8,6 +8,18 @@ class Map:
         self.y2 = height
         self.houses = [None]
         self.theMap = [[ Tile(False) for y in range(self.y2)] for x in range(self.x2)]
+        for y in range (self.y2):
+            self.theMap[self.x1][y].blocked = True
+            self.theMap[self.x2 - 1][y].blocked = True
+        for x in range (self.x2):
+            self.theMap[x][self.y1].blocked = True
+            self.theMap[x][self.y2 - 1].blocked = True
+
+        self.fovMap = libtcod.map_new(width, height)
+        for y in range(height):
+            for x in range(width):
+                libtcod.map_set_properties(self.fovMap, x, y, not self.theMap[x][y].block_sight, not self.theMap[x][y].blocked)
+
 
     def placeHouse(self, inhabitants):
         #each 'person' who is in the house gets at least a 3x3 area, as much as 6x6 
@@ -41,6 +53,9 @@ class Map:
         for y in range(house_y1, house_y1 + house.width):
             theMap[house_x1][y].blocked = True
             theMap[house_x1+ house_length][y].blocked = True
+
+    def fovRecompute(self, playerX, playerY, torchRadius, lightWalls, fovAlgo):
+        libtcod.map_compute_fov(self.fovMap, playerX, playerY, torchRadius, lightWalls, fovAlgo)
 
 class House:
     

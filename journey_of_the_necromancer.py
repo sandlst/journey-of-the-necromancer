@@ -19,13 +19,13 @@ DARK_FLOOR = libtcod.Color(50, 50, 150)
 LIGHT_FLOOR = libtcod.Color(200, 180, 50)
 
 def renderAll():
-    global fovMap, fovRecompute
+    global fovRecompute
     if fovRecompute:
         fovRecompute = False;
-        libtcod.map_compute_fov(fovMap, player.x, player.y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)
+        currentMap.fovRecompute(player.x, player.y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)
     for y in range(currentMap.y2):
         for x in range(currentMap.x2):
-            visible = libtcod.map_is_in_fov(fovMap,x,y)
+            visible = libtcod.map_is_in_fov(currentMap.fovMap,x,y)
             wall = currentMap.theMap[x][y].block_sight
             if not visible:
                 #outside the player's fov
@@ -43,7 +43,7 @@ def renderAll():
                     libtcod.console_set_char_background(con, x, y, LIGHT_FLOOR, libtcod.BKGND_SET)
                 currentMap.theMap[x][y].explored = True
     for creature in creatures:
-        if libtcod.map_is_in_fov(fovMap, creature.x, creature.y):
+        if libtcod.map_is_in_fov(currentMap.fovMap, creature.x, creature.y):
                 libtcod.console_set_default_foreground(con, creature.color)
                 libtcod.console_put_char(con, creature.x, creature.y, creature.character, libtcod.BKGND_NONE)
     libtcod.console_blit(con, 0, 0, currentMap.x2, currentMap.y2, 0, 0, 0)
@@ -56,18 +56,42 @@ def handleKeys():
     if key.vk == libtcod.KEY_ESCAPE:
         return 'exit'
     #movement keys
-    if key.vk == libtcod.KEY_UP:
-        player.move(0, -1)
-        fovRecompute = True
-    if key.vk == libtcod.KEY_DOWN:
-        player.move(0, 1)
-        fovRecompute = True
-    if key.vk == libtcod.KEY_LEFT:
-        player.move(-1, 0)
-        fovRecompute = True
-    if key.vk == libtcod.KEY_RIGHT:
-        player.move(1, 0)
-        fovRecompute = True
+    if libtcod.console_is_key_pressed(libtcod.KEY_UP):
+        if moveOrAttack(0, -1):
+            fovRecompute = True
+        else:
+            return
+    if libtcod.console_is_key_pressed(libtcod.KEY_DOWN):
+        if moveOrAttack(0, 1):
+            fovRecompute = True
+        else:
+            return
+    if libtcod.console_is_key_pressed(libtcod.KEY_LEFT):
+        if moveOrAttack(-1, 0):
+            fovRecompute = True
+        else:
+            return
+    if libtcod.console_is_key_pressed(libtcod.KEY_RIGHT):
+        if moveOrAttack(1, 0):
+            fovRecompute = True
+        else:
+            return
+
+def moveOrAttack(dx, dy):
+    if currentMap.theMap[player.x + dx][player.y + dy].blocked:
+        return False
+    for creature in creatures:
+        if not creature.blocks:
+            break
+        if creature.x == player.x + dx and creature.y == player.y + dy:
+            if player.isHostile(creature):
+                player.attack(creature, sword)
+                return True
+            else:
+                #TODO: present confirmation dialog for attacking neutral creature
+                return False
+    player.move(dx, dy)
+    return True
 # main
 
 #create console
@@ -78,17 +102,12 @@ con = libtcod.console_new(SCREEN_WIDTH, SCREEN_HEIGHT)
 currentMap = Map.Map(SCREEN_WIDTH, SCREEN_HEIGHT)
 #some debug creatures and items
 sword = item.Weapon("sword", 's', 1, 6)
-player = creature.Creature("player", 0,0, '@', libtcod.white)
-npc = creature.Creature("Toad", 0,1, 'T', libtcod.green, monster=True, hp=20)
+player = creature.Creature("player", 2,2, '@', libtcod.white)
+npc = creature.Creature("Toad", 3,2, 'T', libtcod.green, monster=True, hp=20)
+player.makeHostile(npc)
 #list of all creatures in the current map
 creatures = [player]
 creatures.append(npc)
-#create FOV map
-#TODO: move to map.py
-fovMap = libtcod.map_new(SCREEN_WIDTH, SCREEN_HEIGHT)
-for y in range(SCREEN_HEIGHT):
-    for x in range(SCREEN_WIDTH):
-        libtcod.map_set_properties(fovMap, x, y, not currentMap.theMap[x][y].block_sight, not currentMap.theMap[x][y].blocked)
 fovRecompute = True
 
 while not libtcod.console_is_window_closed():

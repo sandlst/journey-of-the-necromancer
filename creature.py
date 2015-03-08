@@ -1,5 +1,9 @@
 import libtcodpy as libtcod
+
+DEAD_COLOR = libtcod.darkest_gray
+
 class Creature:
+
 
     def __init__(self, name, x, y, character, color, monster=False, ai=None, stats=None, hp=1, sightRadius=5, attackRange=1, armorClass=10):
         self.name = name
@@ -9,7 +13,7 @@ class Creature:
         self.color = color
         self.monster = monster
         self.ai = ai
-        self.canPass = False
+        self.blocks = True
         self.isDead = False
         if self.ai:
             self.ai.owner = self
@@ -25,7 +29,7 @@ class Creature:
             self.armorClass = armorClass
         self.sightRadius = sightRadius
         self.attackRange = attackRange
-        self.hostileList = [None]
+        self.hostileList = []
 
     ###
     # setName
@@ -57,7 +61,7 @@ class Creature:
     # isHostile - determines if the creature is hostile to another creature
     ###
     def isHostile(self, other):
-        for creature in hostileList:
+        for creature in self.hostileList:
             if creature.name == other.name:
                 return True
         return False
@@ -66,7 +70,10 @@ class Creature:
     # makeHostile
     ###
     def makeHostile(self, other):
-        hostileList.append(other)
+        for creature in self.hostileList:
+            if creature == other:
+                return
+        self.hostileList.append(other)
 
     ###
     # makeFriendly
@@ -127,8 +134,9 @@ class Creature:
         print "Damage: "+str(damage)
         targetCreature.hp = targetCreature.hp - damage
         if targetCreature.hp < 1:
-            self.passable = True
-            self.isDead = True
+            targetCreature.blocks = False
+            targetCreature.isDead = True
+            targetCreature.color = DEAD_COLOR
             print("The "+targetCreature.name+" died!")
     ###
     # getSightRadius
@@ -139,7 +147,7 @@ class Creature:
     ###
     # lookAround - return a list of all creatures in sight range
     ###
-    #FIXME: self should be a circle instead of a square
+    #FIXME: should be a circle instead of a square
     def lookAround(self, creatures):
         for creature in creatures:
             if creature.x > self.x + self.sightRadius and creature.x < self.x - self.sightRadius:
