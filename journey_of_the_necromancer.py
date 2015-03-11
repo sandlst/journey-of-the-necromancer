@@ -1,5 +1,6 @@
 import libtcodpy as libtcod
 import map as Map
+import doodad
 import item
 import creature
 
@@ -42,10 +43,13 @@ def renderAll():
                 else:
                     libtcod.console_set_char_background(con, x, y, LIGHT_FLOOR, libtcod.BKGND_SET)
                 currentMap.theMap[x][y].explored = True
+    for theDoodad in doodads:
+        theDoodad.draw(con, currentMap)
     for creature in creatures:
         if libtcod.map_is_in_fov(currentMap.fovMap, creature.x, creature.y):
                 libtcod.console_set_default_foreground(con, creature.color)
                 libtcod.console_put_char(con, creature.x, creature.y, creature.character, libtcod.BKGND_NONE)
+
     libtcod.console_blit(con, 0, 0, currentMap.x2, currentMap.y2, 0, 0, 0)
 
 def handleKeys():
@@ -57,40 +61,43 @@ def handleKeys():
         return 'exit'
     #movement keys
     if libtcod.console_is_key_pressed(libtcod.KEY_UP):
-        if moveOrAttack(0, -1):
+        if moveOrAttack(0, -1, player):
             fovRecompute = True
         else:
             return
     if libtcod.console_is_key_pressed(libtcod.KEY_DOWN):
-        if moveOrAttack(0, 1):
+        if moveOrAttack(0, 1, player):
             fovRecompute = True
         else:
             return
     if libtcod.console_is_key_pressed(libtcod.KEY_LEFT):
-        if moveOrAttack(-1, 0):
+        if moveOrAttack(-1, 0, player):
             fovRecompute = True
         else:
             return
     if libtcod.console_is_key_pressed(libtcod.KEY_RIGHT):
-        if moveOrAttack(1, 0):
+        if moveOrAttack(1, 0, player):
             fovRecompute = True
         else:
             return
 
-def moveOrAttack(dx, dy):
+def moveOrAttack(dx, dy, creature):
     if currentMap.theMap[player.x + dx][player.y + dy].blocked:
         return False
-    for creature in creatures:
-        if not creature.blocks:
+    for otherCreature in creatures:
+        if not otherCreature.blocks:
             break
-        if creature.x == player.x + dx and creature.y == player.y + dy:
-            if player.isHostile(creature):
-                player.attack(creature, sword)
+        if otherCreature.x == creature.x + dx and otherCreature.y == creature.y + dy:
+            if creature.isHostile(otherCreature):
+                #TODO: use actual weapon instead of placeholder
+                creature.attack(otherCreature, sword)
                 return True
             else:
                 #TODO: present confirmation dialog for attacking neutral creature
+                #for the player
                 return False
-    player.move(dx, dy)
+
+    creature.move(dx, dy)
     return True
 # main
 
@@ -100,6 +107,36 @@ libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'Journey of the Necromanc
 con = libtcod.console_new(SCREEN_WIDTH, SCREEN_HEIGHT)
 #create first map
 currentMap = Map.Map(SCREEN_WIDTH, SCREEN_HEIGHT)
+#add doodads
+doodads = []
+for x in range(SCREEN_WIDTH):
+    for y in range(SCREEN_HEIGHT):
+        # fill with grass
+        grassDoodad = doodad.Grass(x,y)
+        doodads.append(grassDoodad)
+otherDoodads = libtcod.random_get_int(0, 1, 10)
+for i in range(otherDoodads):
+    doodadType = libtcod.random_get_int(0,0,1)
+
+    if doodadType == 0: #Make a tree
+        theDoodad = doodad.Tree(libtcod.random_get_int(0,0, SCREEN_WIDTH), libtcod.random_get_int(0,0, SCREEN_HEIGHT))
+    elif doodadType == 1: #make a lake
+        theDoodad = doodad.Lake(libtcod.random_get_int(0,0, SCREEN_WIDTH), libtcod.random_get_int(0,0, SCREEN_HEIGHT))
+
+    #check tiles for block status
+    #TODO make half-doodads appear on screen edges possibly
+    doodadBlocked = False
+    for x in range(theDoodad.tileSize / 2):
+        for y in range(theDoodad.tileSize / 2):
+            if theDoodad.x + x > SCREEN_WIDTH - 1 or theDoodad.y + y > SCREEN_HEIGHT - 1:
+                continue
+            if currentMap.theMap[theDoodad.x + x][theDoodad.y + y].blocked:
+                doodadBlocked = True
+    if doodadBlocked:
+        continue
+    else:
+        doodads.append(theDoodad)
+
 #some debug creatures and items
 sword = item.Weapon("sword", 's', 1, 6)
 player = creature.Creature("player", 2,2, '@', libtcod.white)

@@ -8,6 +8,7 @@ class Map:
         self.y2 = height
         self.houses = [None]
         self.theMap = [[ Tile(False) for y in range(self.y2)] for x in range(self.x2)]
+        #TODO: mark tiles for transporting to a new map instead of blocking
         for y in range (self.y2):
             self.theMap[self.x1][y].blocked = True
             self.theMap[self.x2 - 1][y].blocked = True
@@ -15,6 +16,7 @@ class Map:
             self.theMap[x][self.y1].blocked = True
             self.theMap[x][self.y2 - 1].blocked = True
 
+        #set up FOV for player
         self.fovMap = libtcod.map_new(width, height)
         for y in range(height):
             for x in range(width):
