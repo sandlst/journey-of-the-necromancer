@@ -1,4 +1,5 @@
 import libtcodpy as libtcod
+import doodad
 class Map:
 
     def __init__(self, width, height):
@@ -15,6 +16,46 @@ class Map:
         for x in range (self.x2):
             self.theMap[x][self.y1].blocked = True
             self.theMap[x][self.y2 - 1].blocked = True
+
+        #Set up doodads
+        self.doodads =[]
+        #fill with grass
+        for x in range(self.x2):
+            for y in range(self.y2):
+                grassDoodad = doodad.Grass(x, y)
+                self.doodads.append(grassDoodad)
+        #create other doodads
+        otherDoodadsCount = libtcod.random_get_int(0, 0, 130)
+        for i in range(otherDoodadsCount):
+            doodadType = libtcod.random_get_int(0,0,1)
+
+            if doodadType == 0:
+                #make a tree
+                theDoodad = doodad.Tree(libtcod.random_get_int(0, self.x1, self.x2), libtcod.random_get_int(0, self.y1, self.y2))
+
+            elif doodadType == 1:
+                #make a lake
+                theDoodad = doodad.Lake(libtcod.random_get_int(0, self.x1, self.x2), libtcod.random_get_int(0, self.y1, self.y2))
+            #check doodad for blocked status
+            blocked = False
+            for x in range(theDoodad.tileSize / 2):
+                for y in range(theDoodad.tileSize / 2):
+                    if theDoodad.x + x > self.x1 or theDoodad.y + y > self.y1:
+                        continue
+                    if self.theMap[theDoodad.x + x][theDoodad.y + y].blocked:
+                        blocked = True
+                        break
+            if blocked:
+                continue
+            else:
+                # block tiles
+                for x in range(theDoodad.tileSize / 2):
+                    for y in range(theDoodad.tileSize / 2):
+                        if theDoodad.x + x > self.x2 - 1 or theDoodad.y + y > self.y2 - 1:
+                            continue
+                        self.theMap[theDoodad.x + x][theDoodad.y + y].blocked = theDoodad.blocks
+                        self.theMap[theDoodad.x + x][theDoodad.y + y].block_sight = theDoodad.blockSight
+                self.doodads.append(theDoodad)
 
         #set up FOV for player
         self.fovMap = libtcod.map_new(width, height)
@@ -58,6 +99,9 @@ class Map:
 
     def fovRecompute(self, playerX, playerY, torchRadius, lightWalls, fovAlgo):
         libtcod.map_compute_fov(self.fovMap, playerX, playerY, torchRadius, lightWalls, fovAlgo)
+
+    def getDoodads(self):
+        return self.doodads
 
 class House:
     

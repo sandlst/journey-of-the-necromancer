@@ -17,7 +17,8 @@ TORCH_RADIUS = 10
 DARK_WALL = libtcod.Color(0, 0, 100)
 LIGHT_WALL = libtcod.Color(130, 110, 50)
 DARK_FLOOR = libtcod.Color(50, 50, 150)
-LIGHT_FLOOR = libtcod.Color(200, 180, 50)
+#LIGHT_FLOOR = libtcod.Color(200, 180, 50)
+LIGHT_FLOOR = libtcod.Color(0, 0, 0)
 
 def renderAll():
     global fovRecompute
@@ -43,7 +44,7 @@ def renderAll():
                 else:
                     libtcod.console_set_char_background(con, x, y, LIGHT_FLOOR, libtcod.BKGND_SET)
                 currentMap.theMap[x][y].explored = True
-    for theDoodad in doodads:
+    for theDoodad in currentMap.doodads:
         theDoodad.draw(con, currentMap)
     for creature in creatures:
         if libtcod.map_is_in_fov(currentMap.fovMap, creature.x, creature.y):
@@ -107,39 +108,20 @@ libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'Journey of the Necromanc
 con = libtcod.console_new(SCREEN_WIDTH, SCREEN_HEIGHT)
 #create first map
 currentMap = Map.Map(SCREEN_WIDTH, SCREEN_HEIGHT)
-#add doodads
-doodads = []
-for x in range(SCREEN_WIDTH):
-    for y in range(SCREEN_HEIGHT):
-        # fill with grass
-        grassDoodad = doodad.Grass(x,y)
-        doodads.append(grassDoodad)
-otherDoodads = libtcod.random_get_int(0, 1, 10)
-for i in range(otherDoodads):
-    doodadType = libtcod.random_get_int(0,0,1)
-
-    if doodadType == 0: #Make a tree
-        theDoodad = doodad.Tree(libtcod.random_get_int(0,0, SCREEN_WIDTH), libtcod.random_get_int(0,0, SCREEN_HEIGHT))
-    elif doodadType == 1: #make a lake
-        theDoodad = doodad.Lake(libtcod.random_get_int(0,0, SCREEN_WIDTH), libtcod.random_get_int(0,0, SCREEN_HEIGHT))
-
-    #check tiles for block status
-    #TODO make half-doodads appear on screen edges possibly
-    doodadBlocked = False
-    for x in range(theDoodad.tileSize / 2):
-        for y in range(theDoodad.tileSize / 2):
-            if theDoodad.x + x > SCREEN_WIDTH - 1 or theDoodad.y + y > SCREEN_HEIGHT - 1:
-                continue
-            if currentMap.theMap[theDoodad.x + x][theDoodad.y + y].blocked:
-                doodadBlocked = True
-    if doodadBlocked:
-        continue
-    else:
-        doodads.append(theDoodad)
-
 #some debug creatures and items
 sword = item.Weapon("sword", 's', 1, 6)
-player = creature.Creature("player", 2,2, '@', libtcod.white)
+playerPlaced = False
+for x in range(currentMap.x2):
+    for y in range(currentMap.y2):
+        if currentMap.theMap[x][y].blocked:
+            continue
+        else:
+            player = creature.Creature("player", x,y, '@', libtcod.white)
+            playerPlaced = True
+            break
+    if playerPlaced:
+        break
+
 npc = creature.Creature("Toad", 3,2, 'T', libtcod.green, monster=True, hp=20)
 player.makeHostile(npc)
 #list of all creatures in the current map

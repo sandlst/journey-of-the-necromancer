@@ -16,11 +16,13 @@ class Doodad(object):
             tileSize = self.tileSize
         for x in range(tileSize):
             for y in range(tileSize):
+                if self.x + x > theMap.x2 - 1 or self.y + y > theMap.y2 - 1:
+                    continue
                 if libtcod.map_is_in_fov(theMap.fovMap, self.x + x, self.y + y):
                     libtcod.console_set_default_foreground(con, self.color)
                     libtcod.console_put_char(con, self.x + x, self.y + y, self.character, libtcod.BKGND_NONE)
-                theMap.theMap[self.x + x][self.y + y].blocked = blocks
-                theMap.theMap[self.x + x][self.y + y].blockSight = blockSight
+                #theMap.theMap[self.x + x][self.y + y].blocked = blocks
+                #theMap.theMap[self.x + x][self.y + y].blockSight = blockSight
 
 
 class Grass(Doodad):
