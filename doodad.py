@@ -21,8 +21,6 @@ class Doodad(object):
                 if libtcod.map_is_in_fov(theMap.fovMap, self.x + x, self.y + y):
                     libtcod.console_set_default_foreground(con, self.color)
                     libtcod.console_put_char(con, self.x + x, self.y + y, self.character, libtcod.BKGND_NONE)
-                #theMap.theMap[self.x + x][self.y + y].blocked = blocks
-                #theMap.theMap[self.x + x][self.y + y].blockSight = blockSight
 
 
 class Grass(Doodad):

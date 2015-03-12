@@ -1,6 +1,7 @@
 import libtcodpy as libtcod
+import math
 
-DEAD_COLOR = libtcod.darkest_gray
+DEAD_COLOR = libtcod.light_grey
 
 class Creature:
 
@@ -30,7 +31,7 @@ class Creature:
         self.sightRadius = sightRadius
         self.attackRange = attackRange
         self.hostileList = []
-
+        self.weapon = None
     ###
     # setName
     ###
@@ -38,16 +39,24 @@ class Creature:
         self.name = newName
 
     ###
-    # move 
+    # moveOrAttack 
     ###
-    def move(self, dx, dy):
-        self.x = self.x + dx
-        self.y = self.y + dy
+    def moveOrAttack(self, dx, dy, theMap):
+        if theMap.theMap[self.x + dx][self.y + dy].blocked:
+            return False
+        else:
+            for creature in self.hostileList:
+                if creature.x == self.x + dx and creature.y == self.y + dy and not creature.isDead:
+                    self.attack(creature, self.weapon)
+                    return True
+            self.x = self.x + dx
+            self.y = self.y + dy
+            return True
 
     ###
     # chase - move towards something
     ###
-    def chase(self, target_x, target_y):
+    def chase(self, target_x, target_y, theMap):
         dx = target_x - self.x
         dy = target_y - self.y
         #vector to find distance
@@ -55,7 +64,7 @@ class Creature:
         #normalize, then round and convert
         dx = int(round(dx / distance))
         dy = int(round(dy / distance))
-        self.move(dx, dy)
+        self.moveOrAttack(dx, dy, theMap)
 
     ###
     # isHostile - determines if the creature is hostile to another creature
@@ -90,22 +99,10 @@ class Creature:
         return self.monster
 
     ###
-    # getAttackRange
-    ###
-    def getAttackRange(self):
-        return self.attackRange
-
-    ###
-    # setAttackRange
-    ###
-    def setAttackRange(self, newAttackRange):
-        self.attackRange = newAttackRange
-
-    ###
     # isAttackable
     ###
     def canAttack(self, targetCreature):
-        if abs(self.x - targetCreature.x) > attackRange:
+        if abs(self.x - targetCreature.x) > self.attackRange or abs(self.y - targetCreature.y) > self.attackRange:
             return False
         else:
             return True
@@ -127,11 +124,10 @@ class Creature:
                 #hit!
                 damage=libtcod.random_get_int(0, weapon.minDamage, weapon.maxDamage)
                 damage=damage + self.stats.getStrBonus()
+                print ('The '+ self.name+' hits the '+ targetCreature.name+' for '+str(damage))
             else:
                 #TODO: handle miss
                 pass
-        print "Attack roll: "+str(attack)
-        print "Damage: "+str(damage)
         targetCreature.hp = targetCreature.hp - damage
         if targetCreature.hp < 1:
             targetCreature.blocks = False
@@ -139,24 +135,18 @@ class Creature:
             targetCreature.color = DEAD_COLOR
             print("The "+targetCreature.name+" died!")
     ###
-    # getSightRadius
-    ###
-    def getSightRaius(self):
-        return self.sightRadius
-
-    ###
     # lookAround - return a list of all creatures in sight range
     ###
     #FIXME: should be a circle instead of a square
     def lookAround(self, creatures):
+        sightedCreatures = []
         for creature in creatures:
             if creature.x > self.x + self.sightRadius and creature.x < self.x - self.sightRadius:
                 continue
-            if creature.y > self.y + self.sightRadius and creature.y < self.y - self.getSightRaius:
+            if creature.y > self.y + self.sightRadius and creature.y < self.y - self.sightRadius:
                 continue
             sightedCreatures.append(creature)
         return sightedCreatures
-
 
 class Stats:
 
@@ -216,24 +206,32 @@ class Stats:
 # default AI for monsters
 ###
 class BasicMonster:
-    def takeTurn(self):
-        sightedCreatures = owner.lookAround()
+
+    def __init__(self, theMap):
+        self.theMap = theMap
+
+    def takeTurn(self, sightedCreatures):
+        targetCreature = None
         for creature in sightedCreatures:
-            if owner.isHostile(creature):
+            if self.owner.isHostile(creature):
                 targetCreature = creature
-                if owner.canAttack(creature):
-                    break
-        if targetCreature:
-            if owner.canAttack(targetCreature):
-                owner.attack(targetCreature)
-                return
-            else:
-                owner.chase(targetCreature.x, targetCreature.y)
-                return
+                if self.owner.canAttack(creature):
+                    self.owner.attack(creature, self.owner.weapon)
+                    return 
+                else:
+                    self.owner.chase(targetCreature.x, targetCreature.y, self.theMap)
+                    return
+        #if targetCreature:
+            #if self.owner.canAttack(targetCreature):
+            #    self.owner.attack(targetCreature, self.owner.weapon)
+            #    return
+            #else:
+            #    self.owner.chase(targetCreature.x, targetCreature.y)
+            #    return
         # no hostile creature found; wander around
         #50% chance of not moving anywhere
         if libtcod.random_get_int(0, 0, 100) > 50:
             return
         else:
-            owner.move(libtcod.random_get_int(0,0,1), libtcod.random_get_int(0,0,1))
+            self.owner.moveOrAttack(libtcod.random_get_int(0,0,1), libtcod.random_get_int(0,0,1), self.theMap)
             return
